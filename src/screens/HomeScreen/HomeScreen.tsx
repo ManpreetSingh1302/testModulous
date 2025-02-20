@@ -1,12 +1,10 @@
 import {
-  StyleSheet,
-  Text,
   View,
   SectionList,
   ScrollView,
   Image,
   Dimensions,
-  SectionListData,
+  ActivityIndicator,
 } from 'react-native';
 import React, {memo, useState, useRef} from 'react';
 import Video from 'react-native-video';
@@ -31,11 +29,25 @@ interface renderItemTypes {
 
 // Update MediaItem component to handle the new source format
 const MediaItem = memo(({item, isVisible}: MediaItemTypes) => {
+  const [isLoading, setIsLoading] = useState(true);
+
   return (
     <View style={styles.cardContainer}>
       <View style={styles.mediaItem}>
+        {isLoading && (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        )}
+
         {item.type === 'image' ? (
-          <Image source={item.source} style={styles.media} resizeMode="cover" />
+          <Image
+            source={item.source}
+            style={styles.media}
+            resizeMode="cover"
+            onLoadStart={() => setIsLoading(true)}
+            onLoadEnd={() => setIsLoading(false)}
+          />
         ) : (
           <Video
             source={item.source}
@@ -45,6 +57,8 @@ const MediaItem = memo(({item, isVisible}: MediaItemTypes) => {
             paused={!isVisible}
             muted={true}
             controls
+            onLoadStart={() => setIsLoading(true)}
+            onLoad={() => setIsLoading(false)}
           />
         )}
       </View>
