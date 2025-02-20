@@ -1,4 +1,6 @@
 package com.testmodulous
+import com.testmodulous.ExitAppModule;
+
 
 import android.app.Application
 import com.facebook.react.PackageList
