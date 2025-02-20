@@ -1,162 +1,225 @@
-import React, {useRef, useState, useCallback} from 'react';
-import {View, FlatList, Dimensions} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  SectionList,
+  ScrollView,
+  Image,
+  Dimensions,
+  SectionListData,
+} from 'react-native';
+import React, {memo, useState, useRef} from 'react';
 import Video from 'react-native-video';
-import FastImage from 'react-native-fast-image';
-import {DATA} from '../../constants/constants';
-import {styles} from './HomeScreenStyles';
+import {SECTIONS_DATA} from '../../constants/constants';
 
 const {width} = Dimensions.get('window');
 
-interface CarouselDotsTypes {
-  total: number;
-  current: number;
-}
-interface CarouselItemTypes {
-  item: {type: string; uri: string};
-  isPlaying: boolean;
+interface MediaItemTypes {
+  item: any;
+  isVisible: boolean;
 }
 
-interface CarouselTypes {
-  media: {type: string; uri: string}[];
-  isParentVisible: boolean;
+interface onViewableItemsChangedTypes {
+  viewableItems: Array<{item: any; isViewable: boolean}>;
 }
 
-const HomeScreen = (): React.JSX.Element => {
-  const [playingItems, setPlayingItems] = useState<Set<string>>(new Set());
+interface renderItemTypes {
+  item: Array<any>;
+  section: any;
+}
 
-  const viewabilityConfig = useRef({
-    minimumViewTime: 300,
-    itemVisiblePercentThreshold: 30, // Changed to use only this threshold
-  });
-
-  // Renders either an image or video component based on the item type with play/pause control
-  const CarouselItem = ({item, isPlaying}: CarouselItemTypes) => {
-    // To check if the item is an image or a video
-    const isImage = item.type === 'image';
-
-    return (
-      <View style={styles.carouselItemContainer}>
-        <View style={styles.carouselItem}>
-          {isImage ? (
-            <FastImage
-              source={{uri: item.uri}}
-              style={styles.media}
-              resizeMode="cover"
-            />
-          ) : (
-            <Video
-              source={{uri: item.uri}}
-              style={styles.media}
-              resizeMode="cover"
-              controls={false}
-              paused={!isPlaying}
-              repeat={true}
-            />
-          )}
-        </View>
+// Update MediaItem component to handle the new source format
+const MediaItem = memo(({item, isVisible}: MediaItemTypes) => {
+  return (
+    <View style={styles.cardContainer}>
+      <View style={styles.mediaItem}>
+        {item.type === 'image' ? (
+          <Image source={item.source} style={styles.media} resizeMode="cover" />
+        ) : (
+          <Video
+            source={item.source}
+            style={styles.media}
+            resizeMode="cover"
+            repeat
+            paused={!isVisible}
+            muted={true}
+            controls
+          />
+        )}
       </View>
-    );
-  };
+    </View>
+  );
+});
 
-  // Handles visibility changes of items in the FlatList
-  const onViewableItemsChanged = useCallback(({viewableItems}: any) => {
-    const newPlayingItems = new Set<string>();
-    viewableItems.forEach((viewableItem: any) => {
-      newPlayingItems.add(viewableItem.item.id);
-    });
-    setPlayingItems(newPlayingItems);
-  }, []);
+const HomeScreen = () => {
+  const [visibleSections, setVisibleSections] = useState(new Set());
 
-  // Renders pagination dots indicating current position in the carousel with active/inactive states
-  const CarouselDots = React.memo(({total, current}: CarouselDotsTypes) => {
-    return (
-      <View style={styles.dotsContainer}>
-        {Array(total)
-          .fill(0)
-          .map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                {backgroundColor: current === index ? '#0095f6' : '#c4c4c4'},
-              ]}
-            />
-          ))}
-      </View>
-    );
-  });
+  // Tracks which sections are currently visible (60% or more) in the viewport
+  const onViewableItemsChanged = useRef(
+    ({viewableItems}: onViewableItemsChangedTypes) => {
+      const newVisibleSections = new Set();
+      viewableItems.forEach(({item, isViewable}) => {
+        if (isViewable) {
+          newVisibleSections.add(item);
+        }
+      });
+      setVisibleSections(newVisibleSections);
+    },
+  ).current;
 
-  // Horizontal scrollable carousel component that manages media playback and pagination indicators
-  const Carousel = ({media, isParentVisible}: CarouselTypes) => {
-    const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const viewabilityConfig = useRef({
-      minimumViewTime: 300,
-      itemVisiblePercentThreshold: 30,
-    });
-
-    const onViewableItemsChanged = useCallback(({viewableItems}: any) => {
-      if (viewableItems[0]) {
-        setCurrentIndex(viewableItems[0].index);
-        const firstVisibleItem = viewableItems.find(
-          (item: any) => item.item.type === 'video',
-        );
-        setPlayingIndex(firstVisibleItem ? firstVisibleItem.index : null);
-      }
-    }, []);
-
-    return (
-      <View style={styles.carouselWrapper}>
-        <FlatList
-          data={media}
-          horizontal
-          pagingEnabled
-          snapToAlignment="start"
-          decelerationRate="fast"
-          snapToInterval={width - 24}
-          keyExtractor={(_, index) => index.toString()}
-          renderItem={({item, index}) => (
-            <CarouselItem
-              item={item}
-              isPlaying={isParentVisible && index === playingIndex}
-            />
-          )}
-          showsHorizontalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig.current}
-          initialNumToRender={2}
-          windowSize={3}
-          removeClippedSubviews={false}
-        />
-        <CarouselDots total={media?.length} current={currentIndex} />
-      </View>
-    );
-  };
+  // Renders a horizontal scrollable list of media items (images/videos) for each section
+  const renderItem = ({item, section}: renderItemTypes) => (
+    <HorizontalMediaList
+      items={item}
+      isSectionVisible={visibleSections.has(section.data[0])}
+    />
+  );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={DATA}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <View style={styles.listItem}>
-            <Carousel
-              media={item.media}
-              isParentVisible={playingItems.has(item.id)}
-            />
-          </View>
-        )}
-        showsVerticalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig.current}
-        initialNumToRender={2}
-        windowSize={5}
-        maxToRenderPerBatch={2}
-        removeClippedSubviews={false}
-        contentContainerStyle={styles.listContainer}
-      />
-    </View>
+    <SectionList
+      sections={SECTIONS_DATA}
+      renderItem={renderItem}
+      stickySectionHeadersEnabled={false}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.container}
+      onViewableItemsChanged={onViewableItemsChanged}
+      viewabilityConfig={{
+        itemVisiblePercentThreshold: 60,
+      }}
+    />
   );
 };
 
+// Renders a horizontal scrollable list of media items with pagination dots and auto-play functionality
+const HorizontalMediaList = memo(
+  ({
+    items,
+    isSectionVisible,
+  }: {
+    items: Array<any>;
+    isSectionVisible: boolean;
+  }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [visibleItems, setVisibleItems] = useState(new Set([0])); // Start with first item visible
+    const scrollViewRef = useRef(null);
+
+    const handleScroll = (event: {
+      nativeEvent: {contentOffset: {x: number}};
+    }) => {
+      const contentOffset = event.nativeEvent.contentOffset.x;
+      const currentIndex = Math.round(contentOffset / width);
+      setActiveIndex(currentIndex);
+
+      // Calculate which items are more than 60% visible
+      const viewableThreshold = width * 0.6;
+      const visibleIndexes = new Set();
+
+      items.forEach((_, index) => {
+        const itemOffset = index * width;
+        const itemVisibleWidth = width - Math.abs(contentOffset - itemOffset);
+
+        if (itemVisibleWidth > viewableThreshold) {
+          visibleIndexes.add(index);
+        }
+      });
+
+      setVisibleItems(visibleIndexes as any);
+    };
+
+    return (
+      <View>
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.horizontalList}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}>
+          {items.map((item, index) => (
+            <MediaItem
+              key={item.id}
+              item={item}
+              isVisible={isSectionVisible && visibleItems.has(index)}
+            />
+          ))}
+        </ScrollView>
+        <View style={styles.pagination}>
+          {items.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.paginationDot,
+                index === activeIndex && styles.paginationDotActive,
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  },
+);
+
 export default HomeScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#fff',
+    paddingBottom: 20,
+    paddingTop: 10,
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    padding: 15,
+    backgroundColor: '#fff',
+  },
+  horizontalList: {
+    paddingHorizontal: 0,
+  },
+  media: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardContainer: {
+    width: width,
+    paddingHorizontal: 15,
+    marginTop: 25,
+  },
+  mediaItem: {
+    height: 250,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 3,
+    overflow: 'hidden',
+    marginVertical: 2,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ccc',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: '#000',
+  },
+});

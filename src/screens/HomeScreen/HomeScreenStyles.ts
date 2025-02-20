@@ -3,45 +3,35 @@ const {width} = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
+    flexGrow: 1,
+    backgroundColor: '#fff',
+    paddingBottom: 20,
+    paddingTop: 10,
   },
-  listContainer: {
-    padding: 12,
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    padding: 15,
+    backgroundColor: '#fff',
   },
-  carousel: {
-    marginBottom: 8,
+  horizontalList: {
+    paddingHorizontal: 0,
   },
-  dotsContainer: {
-    flexDirection: 'row',
+  media: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 8,
   },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginHorizontal: 2,
+  cardContainer: {
+    width: width,
+    paddingHorizontal: 15,
+    marginTop: 25,
   },
-  carouselWrapper: {
-    width: width - 24,
-    alignSelf: 'center',
-  },
-  carouselItemContainer: {
-    width: width - 24,
-    paddingRight: 0,
-  },
-  carouselItem: {
-    width: width - 24,
-    height: (width - 24) * 0.7,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-  },
-  listItem: {
-    marginBottom: 16,
+  mediaItem: {
+    height: 250,
     backgroundColor: 'white',
     borderRadius: 12,
     shadowColor: '#000',
@@ -49,12 +39,26 @@ export const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
     elevation: 3,
+    overflow: 'hidden',
+    marginVertical: 2,
   },
-  media: {
-    width: '100%',
-    height: '100%',
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ccc',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: '#000',
   },
 });
